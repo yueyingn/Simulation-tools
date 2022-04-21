@@ -2,7 +2,7 @@
 ## Validation pipeline for the production run
 
 
-## Process the BH detail file
+### Process the BH detail file
 
 * `bh-detail-reduce.py` : write the BlackholeDetails-R to seperate physical columns in bigfile format
 
@@ -10,7 +10,7 @@
 mpirun -n 60 python bh-detail-reduce.py --bhdetail-dir "$bhdetail_dir" --output-dir "$output_dir" --snap $i
 ```
 
-## Summary Plots
+### Summary Plots
 
 * `plot-selected-bh-detail.py` : plot BH details for some random selected BHs
 * `plot-stats.py` : plot statistics of BH mass function, luminosity function and galaxy mass function
