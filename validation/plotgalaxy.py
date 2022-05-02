@@ -117,9 +117,11 @@ def place(number, offarray):   # offarray is sorted from smallest to largest
     dummy = np.where(offarray <= number)[0]
     return dummy[-1]
 
-def extract_host_star(file,searchID,crop=20,orientation='xz',ort_radius=-1):
+def extract_host_star(file,searchID,center=None,crop=20,orientation='xy',ort_radius=-1):
     """
-    return 2D RGBA channel for stellar density-age field
+    return 2D RGBA channel for stellar density-age field 
+    searchID of BH is to identify the group
+    if center is None, use position of searchID as center
     """
     pig = BigFile(file)
     redshift = 1./pig.open('Header').attrs['Time'][0]-1
@@ -134,12 +136,18 @@ def extract_host_star(file,searchID,crop=20,orientation='xz',ort_radius=-1):
     
     bhidx = np.where(searchID==bhIDs)[0][0]
     bhpos = pig.open('5/Position')[bhidx]
-    center = bhpos
-
-    Length = pig.open('FOFGroups/LengthByType')[0:1000000]
-    OffsetByType = np.cumsum(Length,axis=0)
-    a1 = np.array([[0,0,0,0,0,0]],dtype=np.uint64)
-    OffsetByType = np.append(a1,OffsetByType,axis=0)
+    
+    if center is None:
+        center = bhpos
+    
+    try:
+        OffsetByType = pig.open('FOFGroups/OffsetByType')[0:1000000]
+    except:
+        Length = pig.open('FOFGroups/LengthByType')[0:1000000]
+        OffsetByType = np.cumsum(Length,axis=0)
+        a1 = np.array([[0,0,0,0,0,0]],dtype=np.uint64)
+        OffsetByType = np.append(a1,OffsetByType,axis=0)
+        
     bhoff = OffsetByType[:,5]
 
     groupindex = place(bhidx,bhoff)
@@ -176,8 +184,8 @@ def extract_host_star(file,searchID,crop=20,orientation='xz',ort_radius=-1):
     imsize = int(lbox/resolution)
     print ("imsize = ",imsize)
 
-    if imsize>2000:
-        imsize=2000
+    if imsize>4000:
+        imsize=4000
 
     ct = lbox/2
 
@@ -193,8 +201,11 @@ def extract_host_star(file,searchID,crop=20,orientation='xz',ort_radius=-1):
 
     star2d = camera.apply(camera.matrix(mpers,mmv),ppos) # apply a camera matrix to data coordinates, return position in clip coordinate
     stardev = camera.todevice(star2d, extent=(imsize, imsize)) # Convert clipping coordinate to device coordinate
-
-    channels = painter.paint(stardev, sml/resolution, [m4,m4*star_age], (imsize, imsize), np=8)
+    
+    psml = sml/resolution
+    psml[psml<1] = 1 # otherwise will have artifact
+    
+    channels = painter.paint(stardev, psml, [m4,m4*star_age], (imsize, imsize), np=8)
     channels[1] /= channels[0]
 
     return channels,mstar
